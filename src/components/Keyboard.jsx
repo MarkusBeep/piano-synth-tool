@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { colorOf, noteName, pitchClass, shade } from '../lib/notes'
+import { noteName, over, pitchClass, rgba, shade, velocityAlpha } from '../lib/notes'
 import { COMPUTER_KEY_LABELS } from '../hooks/useComputerKeyboard'
 
-export default function Keyboard({ layout, active, noteOn, noteOff, latin, labels, baseNote, showKeyHints, scale }) {
+export default function Keyboard({ layout, active, noteOn, noteOff, latin, labels, baseNote, showKeyHints, scale, keyColor }) {
   const pointerNotes = useRef(new Map()) // pointerId -> midi
 
   // Soltar cualquier nota del mouse si el puntero se suelta fuera del teclado.
@@ -54,17 +54,20 @@ export default function Keyboard({ layout, active, noteOn, noteOff, latin, label
     <div className="keyboard" onContextMenu={(e) => e.preventDefault()}>
       {layout.keys.map((k) => {
         const on = active.get(k.midi)
-        const color = colorOf(k.midi)
         const hint = showKeyHints ? COMPUTER_KEY_LABELS[k.midi - baseNote] : null
-        const style = {
-          left: `${k.x * 100}%`,
-          width: `${k.w * 100}%`,
-          '--note': color,
-          '--note-dark': shade(color, 0.35),
-        }
         const text = k.black ? null : label(k.midi)
         const inScale = scale?.pcs.has(pitchClass(k.midi))
         const isTonic = scale && pitchClass(k.midi) === scale.tonic
+        // Un solo color; la intensidad (opacidad) sale de la fuerza del toque.
+        const base = k.black ? '#3b3652' : '#ffffff'
+        const alpha = on ? velocityAlpha(on.velocity) : isTonic ? 0.45 : k.black ? 0.4 : 0.25
+        const style = {
+          left: `${k.x * 100}%`,
+          width: `${k.w * 100}%`,
+          '--note': over(keyColor, alpha, base),
+          '--note-dark': shade(keyColor, 0.35),
+          '--note-glow': rgba(keyColor, alpha),
+        }
         return (
           <div
             key={k.midi}

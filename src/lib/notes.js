@@ -33,6 +33,32 @@ export function noteName(midi, latin = true, withOctave = true) {
 // Nombre en inglés (para Tone.js y Tonal).
 export const toneName = (midi) => `${NAMES_EN[pitchClass(midi)]}${octaveOf(midi)}`
 
+// Color único de las teclas: la intensidad se controla con opacidad.
+export const DEFAULT_KEY_COLOR = '#CDB4F6'
+
+export function hexToRgb(hex) {
+  const n = parseInt(hex.slice(1), 16)
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+
+export const rgbToHex = (r, g, b) =>
+  '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('').toUpperCase()
+
+export function rgba(hex, alpha) {
+  const [r, g, b] = hexToRgb(hex)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+// Mezcla el color sobre un fondo opaco, como si tuviera esa opacidad.
+export function over(hex, alpha, base = '#ffffff') {
+  const c = hexToRgb(hex)
+  const b = hexToRgb(base)
+  return rgbToHex(...c.map((v, i) => Math.round(v * alpha + b[i] * (1 - alpha))))
+}
+
+// Opacidad según qué tan fuerte se tocó la nota (velocity 0..1).
+export const velocityAlpha = (velocity) => 0.3 + 0.7 * Math.min(1, Math.max(0, velocity))
+
 // Oscurece un color hex para bordes y texto.
 export function shade(hex, amount = 0.25) {
   const n = parseInt(hex.slice(1), 16)

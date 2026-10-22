@@ -4,11 +4,12 @@ import Waterfall from './components/Waterfall'
 import NowPlaying from './components/NowPlaying'
 import NotesPanel, { NOTES_STORAGE_KEY } from './components/NotesPanel'
 import AudioPlayer from './components/AudioPlayer'
+import ColorPanel from './components/ColorPanel'
 import { useNoteEngine } from './hooks/useNoteEngine'
 import { useMidi } from './hooks/useMidi'
 import { useComputerKeyboard } from './hooks/useComputerKeyboard'
 import { startAudio, setVolume } from './audio/piano'
-import { PASTELS, RANGES, keyboardLayout, noteName } from './lib/notes'
+import { DEFAULT_KEY_COLOR, RANGES, keyboardLayout, noteName, over } from './lib/notes'
 import { describe } from './lib/chords'
 import { analyzeText } from './lib/keyDetect'
 import { load, save } from './lib/storage'
@@ -34,6 +35,7 @@ export default function App() {
   const [notesText, setNotesText] = useState(() => load(NOTES_STORAGE_KEY, ''))
   const [showSidebar, setShowSidebar] = useState(() => load('show-sidebar', true))
   const [scaleKey, setScaleKey] = useState(null) // tonalidad resaltada en el teclado
+  const [keyColor, setKeyColor] = useState(() => load('key-color', DEFAULT_KEY_COLOR))
 
   const engine = useNoteEngine({ soundOn })
   const midi = useMidi(engine)
@@ -58,6 +60,7 @@ export default function App() {
 
   useEffect(() => setVolume(volume), [volume])
   useEffect(() => save('show-sidebar', showSidebar), [showSidebar])
+  useEffect(() => save('key-color', keyColor), [keyColor])
 
   const current = describe([...engine.active.keys()].sort((a, b) => a - b))
   const currentChord = current?.chord ? current.title : null
@@ -85,8 +88,8 @@ export default function App() {
             <span>{showSidebar ? 'Ocultar panel' : 'Panel'}</span>
           </button>
           <div className="logo">
-            {PASTELS.slice(0, 7).map((c, i) => (
-              <span key={i} style={{ background: c }} />
+            {[0.35, 0.55, 0.45, 1, 0.65, 0.85, 0.4].map((a, i) => (
+              <span key={i} style={{ background: over(keyColor, a) }} />
             ))}
           </div>
           <div>
@@ -154,6 +157,7 @@ export default function App() {
                 <button className={labels === 'all' ? 'on' : ''} onClick={() => setLabels('all')}>Todas</button>
               </div>
             </label>
+            <ColorPanel color={keyColor} setColor={setKeyColor} />
             <label>
               Velocidad
               <input type="range" min="40" max="400" value={speed} onChange={(e) => setSpeed(Number(e.target.value))} />
@@ -185,7 +189,7 @@ export default function App() {
           />
 
           <main className="stage">
-            <Waterfall layout={layout} subscribe={engine.subscribe} speed={speed} sparkles={sparkles} />
+            <Waterfall layout={layout} subscribe={engine.subscribe} speed={speed} sparkles={sparkles} keyColor={keyColor} />
             <Keyboard
               layout={layout}
               active={engine.active}
@@ -196,6 +200,7 @@ export default function App() {
               baseNote={baseNote}
               showKeyHints={showKeyHints}
               scale={scaleKey}
+              keyColor={keyColor}
             />
           </main>
         </div>

@@ -1,14 +1,14 @@
 import { useEffect, useRef } from 'react'
-import { colorOf, pitchClass, shade } from '../lib/notes'
+import { pitchClass, shade, velocityAlpha } from '../lib/notes'
 
 // Lienzo donde cada nota tocada nace en el teclado y sube como una cinta
-// de color pastel. Al tocarla salen chispas y un anillo de onda.
-export default function Waterfall({ layout, subscribe, speed, sparkles }) {
+// de un solo color; su opacidad depende de la fuerza del toque. Al tocarla salen chispas y un anillo de onda.
+export default function Waterfall({ layout, subscribe, speed, sparkles, keyColor }) {
   const canvasRef = useRef(null)
   const layoutRef = useRef(layout)
   layoutRef.current = layout
-  const opts = useRef({ speed, sparkles })
-  opts.current = { speed, sparkles }
+  const opts = useRef({ speed, sparkles, keyColor })
+  opts.current = { speed, sparkles, keyColor }
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -50,7 +50,7 @@ export default function Waterfall({ layout, subscribe, speed, sparkles }) {
         const k = keyRect(midi)
         if (!k) return
         const cx = k.x + k.w / 2
-        ripples.push({ x: cx, born: now, color: colorOf(midi), w: k.w })
+        ripples.push({ x: cx, born: now, w: k.w, alpha: velocityAlpha(velocity) })
         if (opts.current.sparkles) {
           const count = 8 + Math.round(velocity * 14)
           for (let i = 0; i < count; i++) {
@@ -64,7 +64,7 @@ export default function Waterfall({ layout, subscribe, speed, sparkles }) {
               life: 0,
               ttl: 0.6 + Math.random() * 0.9,
               size: 1.5 + Math.random() * 3.5,
-              color: colorOf(midi + (Math.random() < 0.25 ? 7 : 0)),
+              alpha: velocityAlpha(velocity) * (0.6 + Math.random() * 0.4),
               star: Math.random() < 0.35,
             })
           }
@@ -124,8 +124,8 @@ export default function Waterfall({ layout, subscribe, speed, sparkles }) {
         const k = keyRect(n.midi)
         if (!k) continue
         const h = Math.max(6, bottom - top)
-        const color = colorOf(n.midi)
-        const alpha = 0.55 + n.velocity * 0.45
+        const color = opts.current.keyColor
+        const alpha = velocityAlpha(n.velocity)
         ctx.save()
         ctx.globalAlpha = alpha
         ctx.shadowColor = color
@@ -154,8 +154,8 @@ export default function Waterfall({ layout, subscribe, speed, sparkles }) {
           continue
         }
         ctx.save()
-        ctx.globalAlpha = (1 - t) * 0.7
-        ctx.strokeStyle = shade(r.color, 0.1)
+        ctx.globalAlpha = (1 - t) * 0.7 * r.alpha
+        ctx.strokeStyle = shade(opts.current.keyColor, 0.1)
         ctx.lineWidth = 2.5 * (1 - t) + 0.5
         ctx.beginPath()
         ctx.ellipse(r.x, height, r.w * 0.6 + t * 50, 6 + t * 30, 0, Math.PI, Math.PI * 2)
@@ -176,8 +176,8 @@ export default function Waterfall({ layout, subscribe, speed, sparkles }) {
         p.x += p.vx * dt
         p.y += p.vy * dt
         const fade = 1 - p.life / p.ttl
-        ctx.globalAlpha = fade
-        ctx.fillStyle = shade(p.color, 0.05)
+        ctx.globalAlpha = fade * p.alpha
+        ctx.fillStyle = shade(opts.current.keyColor, 0.05)
         if (p.star) drawStar(p.x, p.y, p.size * 0.7)
         else {
           ctx.beginPath()
